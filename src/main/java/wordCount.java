@@ -49,8 +49,11 @@ public class wordCount {
         Configuration conf = new Configuration();
         Job job = Job.getInstance(conf, "word count");
         job.setJarByClass(wordCount.class);
+        // map step
         job.setMapperClass(TokenizerMapper.class);
+        // combine step
         job.setCombinerClass(IntSumReducer.class);
+        //r reduce step
         job.setReducerClass(IntSumReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
