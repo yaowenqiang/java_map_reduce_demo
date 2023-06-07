@@ -27,3 +27,22 @@ Map-Reduce Process Flow
 
 map -> combine -> shuffle -> reduce
 
+
+the in put and out put format in combine must match
+
+```java
+
+import org.apache.hadoop.io.LongWritable;
+
+public class Map extends
+        Reduce<Text, Text, Text, LongWritable> {
+}
+
+public class Combine extends
+        Reduce<Text, LongWritable, Text, LongWritable> {
+}
+
+public class Combine extends
+        Reduce<Text, LongWritable, Text, Text> {
+}
+```
