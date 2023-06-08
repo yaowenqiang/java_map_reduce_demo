@@ -1,9 +1,8 @@
 import java.io.IOException;
-import java.util.StringTokenizer;
 
-import jdk.nashorn.internal.ir.CallNode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -25,18 +24,37 @@ public class ExamScoresAverage {
         }
     }
 
-    public static class ReduceClass
-            extends Reducer<Text, Text, Text, Text> {
 
-        public void reduce(Text key, Iterable<IntWritable> values,
-                           Context context
+    public static class Combine extends Reducer<Text, Text, Text, Text> {
+
+        public void reduce(Text key, Iterable<Text> values, Context context
         ) throws IOException, InterruptedException {
-            int sum = 0;
-            for (IntWritable val : values) {
-                sum += val.get();
+
+            long numberOfCandidates = 0L;
+            double totalScore = 0d;
+            for (Text text : values) {
+                String value = text.toString();
+                String[] sValues = value.split(",");
+                totalScore = totalScore + Double.parseDouble(sValues[0]);
+                numberOfCandidates += Long.parseLong(sValues[1]);
             }
-            result.set(sum);
-            context.write(key, result);
+
+            context.write(key, new Text(totalScore + "," + numberOfCandidates));
+        }
+    }
+    public static class Reduce extends Reducer<Text, Text, Text, DoubleWritable> {
+        public void reduce(Text key, Iterable<Text> values, Context context
+        ) throws IOException, InterruptedException {
+            long numberOfCandidates = 0L;
+            double totalScore = 0d;
+            for (Text text : values) {
+                String value = text.toString();
+                String[] sValues = value.split(",");
+                totalScore = totalScore + Double.parseDouble(sValues[0]);
+                numberOfCandidates += Long.parseLong(sValues[1]);
+            }
+            double average = totalScore / numberOfCandidates;
+            context.write(key, new DoubleWritable(average));
         }
     }
 
@@ -45,11 +63,11 @@ public class ExamScoresAverage {
         Job job = Job.getInstance(conf, "exam scores average");
         job.setJarByClass(ExamScoresAverage.class);
         // map step
-        job.setMapperClass(TokenizerMapper.class);
+        job.setMapperClass(MapClass.class);
         // combine step
-        job.setCombinerClass(IntSumReducer.class);
+        job.setCombinerClass(Combine.class);
         //r reduce step
-        job.setReducerClass(IntSumReducer.class);
+        job.setReducerClass(Reduce.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
